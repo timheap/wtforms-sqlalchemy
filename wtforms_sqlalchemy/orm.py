@@ -83,6 +83,7 @@ class ModelConverterBase(object):
             'filters': [],
             'default': None,
         }
+        kwargs['description'] = prop.doc
 
         if field_args:
             kwargs.update(field_args)
