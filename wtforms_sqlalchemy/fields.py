@@ -202,3 +202,41 @@ class QueryCheckboxField(QuerySelectMultipleField):
 def get_pk_from_identity(obj):
     key = identity_key(instance=obj)[1]
     return ':'.join(text_type(x) for x in key)
+
+
+class EnumSelectField(SelectFieldBase):
+    widget = widgets.Select()
+
+    def __init__(self, *args, enum, members=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enum = enum
+        if members is not None:
+            self.members = list(members)
+        else:
+            self.members = list(enum)
+        self.members_set = set(self.members)
+        self.members_map = {member.name: member for member in self.members}
+
+    def to_choice(self, member):
+        return (member.name, str(member))
+
+    def iter_choices(self):
+        for member in self.members:
+            yield (member.name, str(member), member is self.data)
+
+    def process_data(self, value):
+        if isinstance(value, self.enum):
+            self.data = value
+        else:
+            self.data = None
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                self.data = self.members_map[valuelist[0]]
+            except (ValueError, TypeError, KeyError):
+                raise ValueError(self.gettext('Invalid Choice: could not coerce'))
+
+    def pre_validate(self, form):
+        if self.data not in self.members:
+            raise ValueError(self.gettext('Not a valid choice'))
