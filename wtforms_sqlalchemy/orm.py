@@ -7,7 +7,8 @@ import inspect
 
 from wtforms import validators, fields as wtforms_fields
 from wtforms.form import Form
-from .fields import QuerySelectField, QuerySelectMultipleField
+
+from .fields import EnumSelectField, QuerySelectField, QuerySelectMultipleField
 
 __all__ = (
     'model_fields', 'model_form',
@@ -179,8 +180,12 @@ class ModelConverter(ModelConverterBase):
 
     @converts('Enum')
     def conv_Enum(self, column, field_args, **extra):
-        field_args['choices'] = [(e, e) for e in column.type.enums]
-        return wtforms_fields.SelectField(**field_args)
+        if column.type.enum_class is not None:
+            field_args['enum'] = column.type.enum_class
+            return EnumSelectField(**field_args)
+        else:
+            field_args['choices'] = [(e, e) for e in column.type.enums]
+            return wtforms_fields.SelectField(**field_args)
 
     @converts('Integer')  # includes BigInteger and SmallInteger
     def handle_integer_types(self, column, field_args, **extra):
