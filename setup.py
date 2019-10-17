@@ -3,12 +3,12 @@
 from setuptools import setup
 
 setup(
-    name='WTForms-SQLAlchemy',
-    version='0.2dev',
-    url='http://github.com/wtforms/wtforms-sqlalchemy/',
+    name='WTForms-SQLAlchemy-mlenzen',
+    version='0.2',
+    url='http://github.com/mlenzen/wtforms-sqlalchemy/',
     license='BSD',
-    author='Thomas Johansson, James Crasta',
-    author_email='wtforms@simplecodes.com',
+    author='Thomas Johansson, James Crasta, Michael Lenzen',
+    author_email='m.lenzen@gmail.com',
     description='SQLAlchemy tools for WTForms',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -17,11 +17,13 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],

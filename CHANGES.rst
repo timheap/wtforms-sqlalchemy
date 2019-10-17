@@ -7,6 +7,7 @@ Version 0.2
 
 Unreleased
 
+-   Fork the irregularly maintained WTForms-SQLAlchemy
 -   Auto-generated ``DecimalField`` does not limit places for ``Float``
     columns. (`#2`_)
 -   Add an example of using this library with Flask-SQAlchemy. (`#3`_)
