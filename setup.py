@@ -34,4 +34,5 @@ setup(
     },
     test_suite='tests.tests',
     install_requires=['WTForms>=1.0.5', 'SQLAlchemy>=0.7.10'],
+    tests_require=['coverage'],
 )

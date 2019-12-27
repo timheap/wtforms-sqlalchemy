@@ -26,7 +26,6 @@ env:
 install:
   - "pip install WTForms$WTFORMS SQLAlchemy$SQLALCHEMY"
   - "pip install ."
-  - "pip install -r tests/requirements.txt"
 
 # command to run tests
 script: coverage run setup.py test
