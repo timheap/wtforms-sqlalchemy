@@ -1,11 +1,15 @@
 Changes
 =======
 
+Version 0.3
+-----------
+
+Unreleased
 
 Version 0.2
 -----------
 
-Unreleased
+Released on October 16, 2019
 
 -   Fork the irregularly maintained WTForms-SQLAlchemy
 -   Auto-generated ``DecimalField`` does not limit places for ``Float``
@@ -23,7 +27,7 @@ Unreleased
 -   Fix a compatibility issue with SQLAlchemy 2.1 that caused
     ``QuerySelectField`` to fail with a ``ValueError``. (`#9`_, `#10`_,
     `#11`_)
--   ``QuerySelectField.query`` allows no results. (`#12`_)
+-   ``QuerySelectField.query`` allows no results. (`#15`_)
 
 .. _#2: https://github.com/wtforms/wtforms-sqlalchemy/pull/2
 .. _#3: https://github.com/wtforms/wtforms-sqlalchemy/pull/3
@@ -33,7 +37,7 @@ Unreleased
 .. _#9: https://github.com/wtforms/wtforms-sqlalchemy/issues/9
 .. _#10: https://github.com/wtforms/wtforms-sqlalchemy/pull/10
 .. _#11: https://github.com/wtforms/wtforms-sqlalchemy/pull/11
-.. _#12: https://github.com/wtforms/wtforms-sqlalchemy/pull/15
+.. _#15: https://github.com/wtforms/wtforms-sqlalchemy/pull/15
 
 
 Version 0.1
