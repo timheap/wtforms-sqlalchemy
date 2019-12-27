@@ -6,6 +6,11 @@ Version 0.3
 
 Unreleased
 
+-   Explicitly check if db_session is None in converter (`PR #1`_ from timheap_)
+
+.. _PR #1: https://github.com/mlenzen/wtforms-sqlalchemy/pull/1
+.. _timheap: https://github.com/timheap
+
 Version 0.2
 -----------
 
