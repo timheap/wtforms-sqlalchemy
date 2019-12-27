@@ -24,7 +24,7 @@ env:
 
 # command to install dependencies
 install:
-  - "pip install WTForms$WTFORMS SQLAlchemy$SQLALCHEMY"
+  - "pip install WTForms$WTFORMS SQLAlchemy$SQLALCHEMY coverage"
   - "pip install ."
 
 # command to run tests
