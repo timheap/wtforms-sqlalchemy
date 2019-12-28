@@ -20,6 +20,12 @@ env:
     - SQLALCHEMY="==0.9.8" WTFORMS="==1.0.5"
     - SQLALCHEMY=""
 
+jobs:
+  exclude:
+  - python: 3.8
+    env: SQLALCHEMY="==0.8.6" WTFORMS="==1.0.5"
+  - python: 3.8
+    env: SQLALCHEMY="==0.9.8" WTFORMS="==1.0.5"
 
 # command to install dependencies
 install:
