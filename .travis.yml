@@ -4,7 +4,6 @@ language: python
 
 python:
   - 2.7
-  - 3.4
   - 3.5
   - 3.6
   - 3.7
@@ -21,10 +20,16 @@ env:
     - SQLALCHEMY="==0.9.8" WTFORMS="==1.0.5"
     - SQLALCHEMY=""
 
+jobs:
+  exclude:
+  - python: 3.8
+    env: SQLALCHEMY="==0.8.6" WTFORMS="==1.0.5"
+  - python: 3.8
+    env: SQLALCHEMY="==0.9.8" WTFORMS="==1.0.5"
 
 # command to install dependencies
 install:
-  - "pip install WTForms$WTFORMS SQLAlchemy$SQLALCHEMY"
+  - "pip install WTForms$WTFORMS SQLAlchemy$SQLALCHEMY coverage"
   - "pip install ."
 
 # command to run tests
