@@ -22,10 +22,12 @@ Features
 --------
 
 1. Provide SelectField integration with SQLAlchemy models
-    - ``wtforms_sqlalchemy.fields.QuerySelectField``
-    - ``wtforms_sqlalchemy.fields.QuerySelectMultipleField``
+
+   - ``wtforms_sqlalchemy.fields.QuerySelectField``
+   - ``wtforms_sqlalchemy.fields.QuerySelectMultipleField``
+
 2. Generate forms from SQLAlchemy models using
-    ``wtforms_sqlalchemy.orm.model_form``
+   ``wtforms_sqlalchemy.orm.model_form``
 
 Rationale
 ---------
