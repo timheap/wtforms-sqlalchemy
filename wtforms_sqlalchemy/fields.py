@@ -106,7 +106,7 @@ class QuerySelectField(SelectFieldBase):
         return self._object_list
 
     def iter_choices(self):
-        if self.allow_blank:
+        if self.allow_blank or self.data is None:
             yield (self.blank_value, self.blank_text, self.data is None)
 
         for pk, obj in self._get_object_list():
