@@ -105,7 +105,7 @@ class QuerySelectFieldTest(TestBase):
             .filter(self.Test.id == 1, self.Test.id != 1)
             .all()
         )
-        self.assertEqual(form.a(), [])
+        self.assertEqual(form.a(), [('__None', '', True)])
 
 
     def test_with_query_factory(self):
@@ -118,7 +118,7 @@ class QuerySelectFieldTest(TestBase):
 
         form = F()
         self.assertEqual(form.a.data, None)
-        self.assertEqual(form.a(), [('1', 'apple', False), ('2', 'banana', False)])
+        self.assertEqual(form.a(), [('__None', '', True), ('1', 'apple', False), ('2', 'banana', False)])
         self.assertEqual(form.b.data, None)
         self.assertEqual(form.b(), [('__None', '', True), ('hello1', 'apple', False), ('hello2', 'banana', False)])
         self.assertFalse(form.validate())
@@ -152,7 +152,7 @@ class QuerySelectFieldTest(TestBase):
             .filter(self.Test.id == 1, self.Test.id != 1)
             .all()
         )
-        self.assertEqual(form.a(), [])
+        self.assertEqual(form.a(), [('__None', '', True)])
 
 
 class QuerySelectMultipleFieldTest(TestBase):
