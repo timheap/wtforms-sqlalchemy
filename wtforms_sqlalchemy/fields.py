@@ -57,7 +57,7 @@ class QuerySelectField(SelectFieldBase):
 
     def __init__(self, label=None, validators=None, query_factory=None,
                  get_pk=None, get_label=None, allow_blank=False,
-                 blank_value='__None', blank_text='', **kwargs):
+                 blank_value='__None', blank_text='Select...', **kwargs):
         super(QuerySelectField, self).__init__(label, validators, **kwargs)
         self.query_factory = query_factory
 
@@ -107,7 +107,7 @@ class QuerySelectField(SelectFieldBase):
 
     def iter_choices(self):
         if self.allow_blank or self.data is None:
-            yield (self.blank_value, self.blank_text, self.data is None)
+            yield (self.blank_value, self.gettext(self.blank_text), self.data is None)
 
         for pk, obj in self._get_object_list():
             yield (pk, self.get_label(obj), obj == self.data)
