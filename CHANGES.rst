@@ -7,9 +7,13 @@ Version 0.3
 Unreleased
 
 -   Explicitly check if db_session is None in converter (`PR #1`_ from timheap_)
+-   Check for ``sqlalchemy.`` prefix to avoid conflicts with modules that start
+    with ``sqlalchemy`` (`PR #4`_ from msouth_)
 
 .. _PR #1: https://github.com/mlenzen/wtforms-sqlalchemy/pull/1
 .. _timheap: https://github.com/timheap
+.. _PR #4: https://github.com/mlenzen/wtforms-sqlalchemy/pull/4
+.. _msouth: https://github.com/msouth
 
 Version 0.2
 -----------
