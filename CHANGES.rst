@@ -1,10 +1,8 @@
 Changes
 =======
 
-Version 0.3
------------
-
-Unreleased
+Version {{UNREALEASED}}
+-----------------------
 
 -   Explicitly check if db_session is None in converter (`PR #1`_ from timheap_)
 -   Check for ``sqlalchemy.`` prefix to avoid conflicts with modules that start
