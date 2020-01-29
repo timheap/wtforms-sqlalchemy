@@ -1,6 +1,8 @@
 from __future__ import unicode_literals, absolute_import
 
-from sqlalchemy import create_engine, ForeignKey, types as sqla_types
+import sys
+
+from sqlalchemy import create_engine, ForeignKey, types as sqla_types, __version__ as _sqla_version
 from sqlalchemy.schema import MetaData, Table, Column, ColumnDefault
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
@@ -8,14 +10,23 @@ from sqlalchemy.dialects.postgresql import INET, MACADDR, UUID
 from sqlalchemy.dialects.mysql import YEAR
 from sqlalchemy.dialects.mssql import BIT
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from wtforms.compat import text_type, iteritems
-from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField, EnumSelectField
 from wtforms import Form, fields
 from wtforms_sqlalchemy.orm import model_form, ModelConversionError, ModelConverter
 from wtforms.validators import Optional, Required, Regexp
 from .common import DummyPostData, contains_validator
+
+try:
+    import enum
+except ImportError:
+    pass
+
+
+sqla_version = tuple(int(i) for i in _sqla_version.split('.'))
+
 
 
 class LazySelect(object):
@@ -423,3 +434,27 @@ class ModelFormTest(TestCase):
         assert isinstance(form.timestamp, fields.DateTimeField)
 
         assert isinstance(form.date, fields.DateField)
+
+@skipIf(
+    sqla_version < (1, 1) or sys.version_info < (3, 4),
+    "PEP-435-style enum class support was added in SQLAlchemy 1.1, Python 3.4")
+class ModelFormEnumTest(TestCase):
+    def setUp(self):
+        Model = declarative_base()
+        class Fruit(enum.Enum):
+            orange = 1
+            banana = 2
+            apple = 3
+
+        class EnumModel(Model):
+            __tablename__ = "course"
+            id = Column(sqla_types.Integer, primary_key=True)
+            favourite_fruit = Column(sqla_types.Enum(Fruit))
+
+        self.EnumModel = EnumModel
+
+
+    def test_enum_type(self):
+        form = model_form(self.EnumModel)()
+
+        assert isinstance(form.favourite_fruit, EnumSelectField)
