@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import operator
 
 from wtforms import widgets
-from wtforms.compat import text_type, string_types
+from wtforms.compat import string_types, text_type
 from wtforms.fields import SelectFieldBase
 from wtforms.validators import ValidationError
 
@@ -57,7 +57,7 @@ class QuerySelectField(SelectFieldBase):
 
     def __init__(self, label=None, validators=None, query_factory=None,
                  get_pk=None, get_label=None, allow_blank=False,
-                 blank_text='', **kwargs):
+                 blank_value='__None', blank_text='Select...', **kwargs):
         super(QuerySelectField, self).__init__(label, validators, **kwargs)
         self.query_factory = query_factory
 
@@ -76,6 +76,7 @@ class QuerySelectField(SelectFieldBase):
             self.get_label = get_label
 
         self.allow_blank = allow_blank
+        self.blank_value = blank_value
         self.blank_text = blank_text
         self.query = None
         self._object_list = None
@@ -105,15 +106,15 @@ class QuerySelectField(SelectFieldBase):
         return self._object_list
 
     def iter_choices(self):
-        if self.allow_blank:
-            yield ('__None', self.blank_text, self.data is None)
+        if self.allow_blank or self.data is None:
+            yield (self.blank_value, self.gettext(self.blank_text), self.data is None)
 
         for pk, obj in self._get_object_list():
             yield (pk, self.get_label(obj), obj == self.data)
 
     def process_formdata(self, valuelist):
         if valuelist:
-            if self.allow_blank and valuelist[0] == '__None':
+            if self.allow_blank and valuelist[0] == self.blank_value:
                 self.data = None
             else:
                 self._data = None
@@ -122,12 +123,16 @@ class QuerySelectField(SelectFieldBase):
     def pre_validate(self, form):
         data = self.data
         if data is not None:
+            if data == self.blank_value and not self.allow_blank:
+                raise ValidationError(self.gettext('This field is required'))
             for pk, obj in self._get_object_list():
                 if data == obj:
                     break
             else:
                 raise ValidationError(self.gettext('Not a valid choice'))
-        elif self._formdata or not self.allow_blank:
+        elif not self.allow_blank:
+            raise ValidationError(self.gettext('This field is required'))
+        elif self._formdata:
             raise ValidationError(self.gettext('Not a valid choice'))
 
 
@@ -202,3 +207,41 @@ class QueryCheckboxField(QuerySelectMultipleField):
 def get_pk_from_identity(obj):
     key = identity_key(instance=obj)[1]
     return ':'.join(text_type(x) for x in key)
+
+
+class EnumSelectField(SelectFieldBase):
+    widget = widgets.Select()
+
+    def __init__(self, *args, enum, members=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enum = enum
+        if members is not None:
+            self.members = list(members)
+        else:
+            self.members = list(enum)
+        self.members_set = set(self.members)
+        self.members_map = {member.name: member for member in self.members}
+
+    def to_choice(self, member):
+        return (member.name, str(member))
+
+    def iter_choices(self):
+        for member in self.members:
+            yield (member.name, str(member), member is self.data)
+
+    def process_data(self, value):
+        if isinstance(value, self.enum):
+            self.data = value
+        else:
+            self.data = None
+
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                self.data = self.members_map[valuelist[0]]
+            except (ValueError, TypeError, KeyError):
+                raise ValueError(self.gettext('Invalid Choice: could not coerce'))
+
+    def pre_validate(self, form):
+        if self.data not in self.members:
+            raise ValueError(self.gettext('Not a valid choice'))

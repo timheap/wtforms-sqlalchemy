@@ -1,6 +1,6 @@
 from __future__ import unicode_literals, absolute_import
 
-from sqlalchemy import create_engine, ForeignKey, types as sqla_types
+from sqlalchemy import create_engine, ForeignKey, types as sqla_types, __version__ as _sqla_version
 from sqlalchemy.schema import MetaData, Table, Column, ColumnDefault
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
@@ -12,11 +12,19 @@ import sys
 from unittest import TestCase, skipIf
 
 from wtforms.compat import text_type, iteritems
-from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField, EnumSelectField
 from wtforms import Form, fields
 from wtforms_sqlalchemy.orm import model_form, ModelConversionError, ModelConverter
 from wtforms.validators import Optional, Required, Regexp
 from .common import DummyPostData, contains_validator
+
+try:
+    import enum
+except ImportError:
+    pass
+
+
+sqla_version = tuple(int(i) for i in _sqla_version.split('.'))
 
 
 class LazySelect(object):
@@ -105,7 +113,7 @@ class QuerySelectFieldTest(TestBase):
             .filter(self.Test.id == 1, self.Test.id != 1)
             .all()
         )
-        self.assertEqual(form.a(), [])
+        self.assertEqual(form.a(), [('__None', 'Select...', True)])
 
 
     def test_with_query_factory(self):
@@ -118,16 +126,16 @@ class QuerySelectFieldTest(TestBase):
 
         form = F()
         self.assertEqual(form.a.data, None)
-        self.assertEqual(form.a(), [('1', 'apple', False), ('2', 'banana', False)])
+        self.assertEqual(form.a(), [('__None', 'Select...', True), ('1', 'apple', False), ('2', 'banana', False)])
         self.assertEqual(form.b.data, None)
-        self.assertEqual(form.b(), [('__None', '', True), ('hello1', 'apple', False), ('hello2', 'banana', False)])
+        self.assertEqual(form.b(), [('__None', 'Select...', True), ('hello1', 'apple', False), ('hello2', 'banana', False)])
         self.assertFalse(form.validate())
 
         form = F(DummyPostData(a=['1'], b=['hello2']))
         self.assertEqual(form.a.data.id, 1)
         self.assertEqual(form.a(), [('1', 'apple', True), ('2', 'banana', False)])
         self.assertEqual(form.b.data.baz, 'banana')
-        self.assertEqual(form.b(), [('__None', '', False), ('hello1', 'apple', False), ('hello2', 'banana', True)])
+        self.assertEqual(form.b(), [('__None', 'Select...', False), ('hello1', 'apple', False), ('hello2', 'banana', True)])
         self.assertTrue(form.validate())
 
         # Make sure the query is cached
@@ -152,7 +160,7 @@ class QuerySelectFieldTest(TestBase):
             .filter(self.Test.id == 1, self.Test.id != 1)
             .all()
         )
-        self.assertEqual(form.a(), [])
+        self.assertEqual(form.a(), [('__None', 'Select...', True)])
 
 
 class QuerySelectMultipleFieldTest(TestBase):
@@ -424,6 +432,31 @@ class ModelFormTest(TestCase):
         assert isinstance(form.timestamp, fields.DateTimeField)
 
         assert isinstance(form.date, fields.DateField)
+
+
+@skipIf(
+    sqla_version < (1, 1) or sys.version_info < (3, 4),
+    "PEP-435-style enum class support was added in SQLAlchemy 1.1, Python 3.4")
+class ModelFormEnumTest(TestCase):
+    def setUp(self):
+        Model = declarative_base()
+
+        class Fruit(enum.Enum):
+            orange = 1
+            banana = 2
+            apple = 3
+
+        class EnumModel(Model):
+            __tablename__ = "course"
+            id = Column(sqla_types.Integer, primary_key=True)
+            favourite_fruit = Column(sqla_types.Enum(Fruit))
+
+        self.EnumModel = EnumModel
+
+    def test_enum_type(self):
+        form = model_form(self.EnumModel)()
+
+        assert isinstance(form.favourite_fruit, EnumSelectField)
 
 
 @skipIf(
