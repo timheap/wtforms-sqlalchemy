@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import operator
 
 from wtforms import widgets
-from wtforms.compat import text_type, string_types
+from wtforms.compat import string_types, text_type
 from wtforms.fields import SelectFieldBase
 from wtforms.validators import ValidationError
 
@@ -123,12 +123,16 @@ class QuerySelectField(SelectFieldBase):
     def pre_validate(self, form):
         data = self.data
         if data is not None:
+            if data == self.blank_value and not self.allow_blank:
+                raise ValidationError(self.gettext('This field is required'))
             for pk, obj in self._get_object_list():
                 if data == obj:
                     break
             else:
                 raise ValidationError(self.gettext('Not a valid choice'))
-        elif self._formdata or not self.allow_blank:
+        elif not self.allow_blank:
+            raise ValidationError(self.gettext('This field is required'))
+        elif self._formdata:
             raise ValidationError(self.gettext('Not a valid choice'))
 
 
