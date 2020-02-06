@@ -14,8 +14,7 @@ To run this example:
 
 3. Install requirements::
 
-    pip install -e .
-    pip install flask flask_sqlalchemy
+    pip install -r examples/flask/requirements.txt
 
 4. Run the application::
 
