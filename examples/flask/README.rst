@@ -4,18 +4,17 @@ To run this example:
 
 1. Clone the repository::
 
-    git clone https://github.com/wtforms/wtforms-sqlalchemy.git
+    git clone https://github.com/mlenzen/wtforms-sqlalchemy.git
     cd wtforms-sqlalchemy
 
 2. Create and activate a virtual environment::
 
-    virtualenv env
+    python -m venv env
     source env/bin/activate
 
 3. Install requirements::
 
-    pip install -e .
-    pip install flask flask_sqlalchemy
+    pip install -r examples/flask/requirements.txt
 
 4. Run the application::
 

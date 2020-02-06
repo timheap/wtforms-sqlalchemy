@@ -14,6 +14,21 @@ to install::
 
     pip install WTForms-SQLAlchemy-mlenzen
 
+Python 2.7, 3.5, 3.6, 3.7 & 3.8 are supported.
+
+An example using Flask is included in ``examples/flask``.
+
+Features
+--------
+
+1. Provide SelectField integration with SQLAlchemy models
+
+   - ``wtforms_sqlalchemy.fields.QuerySelectField``
+   - ``wtforms_sqlalchemy.fields.QuerySelectMultipleField``
+
+2. Generate forms from SQLAlchemy models using
+   ``wtforms_sqlalchemy.orm.model_form``
+
 Rationale
 ---------
 
