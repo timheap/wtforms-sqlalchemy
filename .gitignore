@@ -9,6 +9,7 @@ MANIFEST
 WTForms_SQLAlchemy.egg-info
 .coverage
 .coveralls.yml
+.tox
 
 # Directories
 build/

@@ -8,7 +8,8 @@ from sqlalchemy.dialects.postgresql import INET, MACADDR, UUID
 from sqlalchemy.dialects.mysql import YEAR
 from sqlalchemy.dialects.mssql import BIT
 
-from unittest import TestCase
+import sys
+from unittest import TestCase, skipIf
 
 from wtforms.compat import text_type, iteritems
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
@@ -222,6 +223,7 @@ class ModelFormTest(TestCase):
             description = Column(sqla_types.Text, nullable=False)
             level = Column(sqla_types.Enum('Primary', 'Secondary'))
             has_prereqs = Column(sqla_types.Boolean, nullable=False)
+            boolean_nullable = Column(sqla_types.Boolean, nullable=True)
             started = Column(sqla_types.DateTime, nullable=False)
             grade = Column(AnotherInteger, nullable=False)
 
@@ -255,9 +257,12 @@ class ModelFormTest(TestCase):
         self.sess = Session()
 
     def test_auto_validators(self):
+        course_form = model_form(self.Course, self.sess)()
         student_form = model_form(self.Student, self.sess)()
         assert contains_validator(student_form.dob, Optional)
         assert contains_validator(student_form.full_name, Required)
+        assert not contains_validator(course_form.has_prereqs, Required)
+        assert not contains_validator(course_form.boolean_nullable, Required)
 
     def test_field_args(self):
         shared = {'full_name': {'validators': [Regexp('test')]}}
@@ -302,7 +307,7 @@ class ModelFormTest(TestCase):
         self.assertRaises(ModelConversionError, model_form, self.Course)
         form_class = model_form(self.Course, exclude=['students'])
         form = form_class()
-        self.assertEqual(len(list(form)), 7)
+        self.assertEqual(len(list(form)), 8)
 
     def test_only(self):
         desired_fields = ['id', 'cost', 'description']
@@ -317,7 +322,7 @@ class ModelFormTest(TestCase):
         self.assertRaises(ModelConversionError, model_form, self.Course, self.sess, converter=converter)
         # If we exclude 'grade' everything should continue working
         F = model_form(self.Course, self.sess, exclude=['grade'], converter=converter)
-        self.assertEqual(len(list(F())), 7)
+        self.assertEqual(len(list(F())), 8)
 
 
 class ModelFormColumnDefaultTest(TestCase):
@@ -359,7 +364,7 @@ class ModelFormColumnDefaultTest(TestCase):
         self.assertEqual(student_form._fields['score'].default, 10)
 
 
-class ModelFormTest(TestCase):
+class ModelFormTest2(TestCase):
     def setUp(self):
         Model = declarative_base()
 
@@ -423,3 +428,62 @@ class ModelFormTest(TestCase):
         assert isinstance(form.timestamp, fields.DateTimeField)
 
         assert isinstance(form.date, fields.DateField)
+
+
+@skipIf(
+    sys.version_info < (3, 6),
+    "Model columns and Form fields do not have a stable order on Python 3.5 and earlier")
+class ModelFormOrderTest(TestCase):
+    def setUp(self):
+        Model = declarative_base()
+
+        class AllTypesModel(Model):
+            __tablename__ = "course"
+            id = Column(sqla_types.Integer, primary_key=True)
+            foo = Column(sqla_types.String)
+            bar = Column(sqla_types.String)
+            baz = Column(sqla_types.String)
+
+        self.Model = AllTypesModel
+
+    def test_order_default(self):
+        """Test that fields come out in model order by default."""
+        form = model_form(self.Model)()
+
+        self.assertEqual(
+            [field.name for field in form],
+            ['foo', 'bar', 'baz'])
+
+    def test_only_all_order(self):
+        """
+        Test that fields come out in the specified order when all fields are
+        named in `only`.
+        """
+        form = model_form(self.Model, only=['bar', 'baz', 'foo'])()
+
+        self.assertEqual(
+            [field.name for field in form],
+            ['bar', 'baz', 'foo'])
+
+    def test_only_subset(self):
+        """
+        Test that fields come out in the specified order when all fields are
+        named in `only`.
+        """
+        form = model_form(self.Model, only=['baz', 'foo'])()
+
+        self.assertEqual(
+            [field.name for field in form],
+            ['baz', 'foo'])
+
+    def test_exclude_order(self):
+        """
+        Test that fields come out in model order, ignoring excluded fields.
+        """
+        field_names = ['foo', 'bar', 'baz']
+        for excluded_field in field_names:
+            form = model_form(self.Model, exclude=[excluded_field])()
+
+            self.assertEqual(
+                [field.name for field in form],
+                [f for f in field_names if f != excluded_field])

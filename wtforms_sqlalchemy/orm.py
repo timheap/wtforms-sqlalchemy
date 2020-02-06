@@ -4,8 +4,10 @@ Tools for generating forms based on SQLAlchemy models.
 from __future__ import unicode_literals
 
 import inspect
+from collections import OrderedDict
 
-from wtforms import validators, fields as wtforms_fields
+from wtforms import fields as wtforms_fields
+from wtforms import validators
 from wtforms.form import Form
 from .fields import QuerySelectField, QuerySelectMultipleField
 
@@ -56,7 +58,7 @@ class ModelConverterBase(object):
             type_string = '%s.%s' % (col_type.__module__, col_type.__name__)
 
             # remove the 'sqlalchemy.' prefix for sqlalchemy <0.7 compatibility
-            if type_string.startswith('sqlalchemy'):
+            if type_string.startswith('sqlalchemy.'):
                 type_string = type_string[11:]
 
             if type_string in self.converters:
@@ -81,6 +83,7 @@ class ModelConverterBase(object):
             'validators': [],
             'filters': [],
             'default': None,
+            'description': prop.doc
         }
 
         if field_args:
@@ -111,11 +114,6 @@ class ModelConverterBase(object):
                     default = callable_default(None) if callable(callable_default) else callable_default
 
             kwargs['default'] = default
-
-            if column.nullable:
-                kwargs['validators'].append(validators.Optional())
-            else:
-                kwargs['validators'].append(validators.Required())
 
             converter = self.get_converter(column)
         else:
@@ -151,39 +149,52 @@ class ModelConverter(ModelConverterBase):
         super(ModelConverter, self).__init__(extra_converters, use_mro=use_mro)
 
     @classmethod
+    def _nullable_required(cls, column, field_args, **extra):
+        if column.nullable:
+            field_args['validators'].append(validators.Optional())
+        else:
+            field_args['validators'].append(validators.Required())
+
+    @classmethod
     def _string_common(cls, column, field_args, **extra):
         if isinstance(column.type.length, int) and column.type.length:
             field_args['validators'].append(validators.Length(max=column.type.length))
 
     @converts('String')  # includes Unicode
-    def conv_String(self, field_args, **extra):
-        self._string_common(field_args=field_args, **extra)
+    def conv_String(self, column, field_args, **extra):
+        self._string_common(column=column, field_args=field_args, **extra)
+        self._nullable_required(column=column, field_args=field_args, **extra)
         return wtforms_fields.StringField(**field_args)
 
     @converts('Text', 'LargeBinary', 'Binary')  # includes UnicodeText
-    def conv_Text(self, field_args, **extra):
-        self._string_common(field_args=field_args, **extra)
+    def conv_Text(self, column, field_args, **extra):
+        self._string_common(column=column, field_args=field_args, **extra)
+        self._nullable_required(column=column, field_args=field_args, **extra)
         return wtforms_fields.TextAreaField(**field_args)
 
     @converts('Boolean', 'dialects.mssql.base.BIT')
-    def conv_Boolean(self, field_args, **extra):
+    def conv_Boolean(self, column, field_args, **extra):
         return wtforms_fields.BooleanField(**field_args)
 
     @converts('Date')
-    def conv_Date(self, field_args, **extra):
+    def conv_Date(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         return wtforms_fields.DateField(**field_args)
 
     @converts('DateTime')
-    def conv_DateTime(self, field_args, **extra):
+    def conv_DateTime(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         return wtforms_fields.DateTimeField(**field_args)
 
     @converts('Enum')
     def conv_Enum(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         field_args['choices'] = [(e, e) for e in column.type.enums]
         return wtforms_fields.SelectField(**field_args)
 
     @converts('Integer')  # includes BigInteger and SmallInteger
     def handle_integer_types(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         unsigned = getattr(column.type, 'unsigned', False)
         if unsigned:
             field_args['validators'].append(validators.NumberRange(min=0))
@@ -191,39 +202,44 @@ class ModelConverter(ModelConverterBase):
 
     @converts('Numeric')  # includes DECIMAL, Float/FLOAT, REAL, and DOUBLE
     def handle_decimal_types(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         # override default decimal places limit, use database defaults instead
         field_args.setdefault('places', None)
         return wtforms_fields.DecimalField(**field_args)
 
     @converts('dialects.mysql.types.YEAR', 'dialects.mysql.base.YEAR')
-    def conv_MSYear(self, field_args, **extra):
+    def conv_MSYear(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         field_args['validators'].append(validators.NumberRange(min=1901, max=2155))
         return wtforms_fields.StringField(**field_args)
 
     @converts('dialects.postgresql.base.INET')
-    def conv_PGInet(self, field_args, **extra):
+    def conv_PGInet(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'IP Address')
         field_args['validators'].append(validators.IPAddress())
         return wtforms_fields.StringField(**field_args)
 
     @converts('dialects.postgresql.base.MACADDR')
-    def conv_PGMacaddr(self, field_args, **extra):
+    def conv_PGMacaddr(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'MAC Address')
         field_args['validators'].append(validators.MacAddress())
         return wtforms_fields.StringField(**field_args)
 
     @converts('dialects.postgresql.base.UUID')
-    def conv_PGUuid(self, field_args, **extra):
+    def conv_PGUuid(self, column, field_args, **extra):
+        self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'UUID')
         field_args['validators'].append(validators.UUID())
         return wtforms_fields.StringField(**field_args)
 
     @converts('MANYTOONE')
-    def conv_ManyToOne(self, field_args, **extra):
+    def conv_ManyToOne(self, column, field_args, **extra):
         return QuerySelectField(**field_args)
 
     @converts('MANYTOMANY', 'ONETOMANY')
-    def conv_ManyToMany(self, field_args, **extra):
+    def conv_ManyToMany(self, column, field_args, **extra):
         return QuerySelectMultipleField(**field_args)
 
 
@@ -238,8 +254,9 @@ def model_fields(model, db_session=None, only=None, exclude=None,
     mapper = model._sa_class_manager.mapper
     converter = converter or ModelConverter()
     field_args = field_args or {}
-    properties = []
 
+    order = []
+    properties = {}
     for prop in mapper.iterate_properties:
         if getattr(prop, 'columns', None):
             if exclude_fk and prop.columns[0].foreign_keys:
@@ -247,16 +264,17 @@ def model_fields(model, db_session=None, only=None, exclude=None,
             elif exclude_pk and prop.columns[0].primary_key:
                 continue
 
-        properties.append((prop.key, prop))
+        order.append(prop.key)
+        properties[prop.key] = prop
 
-    #((p.key, p) for p in mapper.iterate_properties)
     if only:
-        properties = (x for x in properties if x[0] in only)
+        order = list(only)
+        properties = {key: properties[key] for key in only if key in properties}
     elif exclude:
-        properties = (x for x in properties if x[0] not in exclude)
+        properties = {key: prop for key, prop in properties.items() if key not in exclude}
 
     field_dict = {}
-    for name, prop in properties:
+    for name, prop in properties.items():
         field = converter.convert(
             model, mapper, prop,
             field_args.get(name), db_session
@@ -264,7 +282,7 @@ def model_fields(model, db_session=None, only=None, exclude=None,
         if field is not None:
             field_dict[name] = field
 
-    return field_dict
+    return OrderedDict((key, field_dict[key]) for key in order if key in field_dict)
 
 
 def model_form(model, db_session=None, base_class=Form, only=None,

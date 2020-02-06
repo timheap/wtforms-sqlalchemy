@@ -1,15 +1,26 @@
 Changes
 =======
 
-Version 0.3
------------
-
-Unreleased
+Version {{UNREALEASED}}
+-----------------------
 
 -   Explicitly check if db_session is None in converter (`PR #1`_ from timheap_)
+-   Check for ``sqlalchemy.`` prefix to avoid conflicts with modules that start
+    with ``sqlalchemy`` (`PR #4`_ from msouth_)
+-   Always return model_fields fields in the order requested (`PR #6`_ from
+    timheap_)
+-   Use SQLAlchemy's Column.doc for WTForm's Field.description (`PR #10`_ from
+    timheap_)
+-   Do not assume not-nullable means Required for Boolean columns (`PR #9`_ from
+    timheap_)
 
 .. _PR #1: https://github.com/mlenzen/wtforms-sqlalchemy/pull/1
 .. _timheap: https://github.com/timheap
+.. _PR #4: https://github.com/mlenzen/wtforms-sqlalchemy/pull/4
+.. _msouth: https://github.com/msouth
+.. _PR #6: https://github.com/mlenzen/wtforms-sqlalchemy/pull/6
+.. _PR #9: https://github.com/mlenzen/wtforms-sqlalchemy/pull/9
+.. _PR #10: https://github.com/mlenzen/wtforms-sqlalchemy/pull/10
 
 Version 0.2
 -----------

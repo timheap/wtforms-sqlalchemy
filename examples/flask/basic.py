@@ -4,27 +4,58 @@ from flask_sqlalchemy import SQLAlchemy
 from wtforms_sqlalchemy.orm import model_form
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sample_db.sqlite'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 app.config['SQLALCHEMY_ECHO'] = True
 
 db = SQLAlchemy(app)
 
 
-class Car(db.Model):
-    __tablename__ = 'cars'
+class Make(db.Model):
+    __tablename = 'make'
     id = db.Column(db.Integer, primary_key=True)
-    make = db.Column(db.String(50))
-    model = db.Column(db.String(50))
+    name = db.Column(db.String, nullable=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
-CarForm = model_form(Car)
+class Car(db.Model):
+    __tablename__ = 'car'
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer)
+    make_id = db.Column(db.Integer, db.ForeignKey('make.id'))
+    model = db.Column(db.String(50))
+
+    make = db.relationship(Make)
+
+    def __str__(self):
+        return ' '.join((str(self.year), str(self.make), self.model))
+
+
+MakeForm = model_form(Make, db_session=db.session)
+CarForm = model_form(Car, db_session=db.session)
+
+
+@app.route('/make', methods=['GET', 'POST'])
+def make():
+    make = Make()
+    success = False
+
+    if request.method == 'POST':
+        form = MakeForm(request.form, obj=make)
+        if form.validate():
+            form.populate_obj(make)
+            db.session.add(make)
+            db.session.commit()
+            success = True
+    else:
+        form = MakeForm(obj=make)
+
+    return render_template('create.html', model=Make, form=form, success=success)
 
 
 @app.route('/', methods=['GET', 'POST'])
-def create_car():
+def car():
     car = Car()
     success = False
 
@@ -38,7 +69,7 @@ def create_car():
     else:
         form = CarForm(obj=car)
 
-    return render_template('create.html', form=form, success=success)
+    return render_template('create.html', model=Car, form=form, success=success)
 
 
 if __name__ == '__main__':
