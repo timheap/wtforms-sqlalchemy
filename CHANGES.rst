@@ -11,12 +11,15 @@ Version {{UNREALEASED}}
     timheap_)
 -   Use SQLAlchemy's Column.doc for WTForm's Field.description (`PR #10`_ from
     timheap_)
+-   Do not assume not-nullable means Required for Boolean columns (`PR #9`_ from
+    timheap_)
 
 .. _PR #1: https://github.com/mlenzen/wtforms-sqlalchemy/pull/1
 .. _timheap: https://github.com/timheap
 .. _PR #4: https://github.com/mlenzen/wtforms-sqlalchemy/pull/4
 .. _msouth: https://github.com/msouth
 .. _PR #6: https://github.com/mlenzen/wtforms-sqlalchemy/pull/6
+.. _PR #9: https://github.com/mlenzen/wtforms-sqlalchemy/pull/9
 .. _PR #10: https://github.com/mlenzen/wtforms-sqlalchemy/pull/10
 
 Version 0.2
