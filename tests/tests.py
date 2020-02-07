@@ -8,11 +8,12 @@ from sqlalchemy.dialects.postgresql import INET, MACADDR, UUID
 from sqlalchemy.dialects.mysql import YEAR
 from sqlalchemy.dialects.mssql import BIT
 
+import enum
 import sys
 from unittest import TestCase, skipIf
 
 from wtforms.compat import text_type, iteritems
-from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField, EnumSelectField, EnumSelectMultipleField
 from wtforms import Form, fields
 from wtforms_sqlalchemy.orm import model_form, ModelConversionError, ModelConverter
 from wtforms.validators import Optional, Required, Regexp
@@ -32,6 +33,15 @@ class Base(object):
 
 class AnotherInteger(sqla_types.Integer):
     """Use me to test if MRO works like we want"""
+
+
+class Fruit(enum.Enum):
+    apple = "Apple"
+    banana = "Banana"
+    orange = "Orange"
+
+    def __str__(self):
+        return self.value
 
 
 class TestBase(TestCase):
@@ -202,6 +212,138 @@ class QuerySelectMultipleFieldTest(TestBase):
         self.assertEqual([v.id for v in form.a.data], [2])
         self.assertEqual(form.a(), [('1', 'apple', False), ('2', 'banana', True)])
         self.assertTrue(form.validate())
+
+
+class EnumSelectFieldTest(TestBase):
+    def test_field(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit)
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+        self.assertIsNone(form.data['a'])
+
+    def test_field_data(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit)
+        form = F(DummyPostData(a=['banana']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('apple', 'Apple', False), ('banana', 'Banana', True), ('orange', 'Orange', False)])
+        self.assertTrue(form.validate())
+        self.assertIs(form.data['a'], Fruit.banana)
+
+    def test_invalid_choice(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit)
+        form = F(DummyPostData(a=['plum']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+        self.assertFalse(form.validate())
+        self.assertIn('a', form.errors)
+        self.assertIsNone(form.data['a'])
+
+    def test_member_subset(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit, members=[Fruit.orange, Fruit.apple])
+
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('orange', 'Orange', False), ('apple', 'Apple', False)])
+        self.assertTrue(form.validate())
+        self.assertIsNone(form.data['a'])
+
+        form = F(DummyPostData(a=['orange']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('orange', 'Orange', True), ('apple', 'Apple', False)])
+        self.assertTrue(form.validate())
+        self.assertIs(form.data['a'], Fruit.orange)
+
+        form = F(DummyPostData(a=['banana']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('orange', 'Orange', False), ('apple', 'Apple', False)])
+        self.assertFalse(form.validate())
+        self.assertIsNone(form.data['a'])
+
+    def test_get_label(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit, get_label=lambda f: f.name.upper())
+
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('apple', 'APPLE', False), ('banana', 'BANANA', False), ('orange', 'ORANGE', False)])
+
+    def test_no_blank_option(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit, blank_text=None)
+
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+
+
+class EnumSelectMultipleFieldTest(TestBase):
+    def test_field(self):
+        class F(Form):
+            a = EnumSelectMultipleField(enum=Fruit)
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+        self.assertEqual(form.data['a'], [])
+
+    def test_field_data(self):
+        class F(Form):
+            a = EnumSelectMultipleField(enum=Fruit)
+        form = F(DummyPostData(a=['banana', 'orange']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('apple', 'Apple', False), ('banana', 'Banana', True), ('orange', 'Orange', True)])
+        self.assertTrue(form.validate())
+        self.assertEqual(form.data['a'], [Fruit.banana, Fruit.orange])
+
+    def test_invalid_choice(self):
+        class F(Form):
+            a = EnumSelectMultipleField(enum=Fruit)
+        form = F(DummyPostData(a=['orange', 'plum']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+        self.assertFalse(form.validate())
+        self.assertIn('a', form.errors)
+        self.assertIsNone(form.data['a'])
+
+    def test_member_subset(self):
+        class F(Form):
+            a = EnumSelectMultipleField(enum=Fruit, members=[Fruit.orange, Fruit.apple])
+
+        form = F()
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('orange', 'Orange', False), ('apple', 'Apple', False)])
+        self.assertTrue(form.validate())
+        self.assertEqual(form.data['a'], [])
+
+        form = F(DummyPostData(a=['orange']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('orange', 'Orange', True), ('apple', 'Apple', False)])
+        self.assertTrue(form.validate())
+        self.assertEqual(form.data['a'], [Fruit.orange])
+
+        form = F(DummyPostData(a=['banana']))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('orange', 'Orange', False), ('apple', 'Apple', False)])
+        self.assertFalse(form.validate())
+        self.assertIsNone(form.data['a'])
 
 
 class ModelFormTest(TestCase):
@@ -384,6 +526,7 @@ class ModelFormTest2(TestCase):
             largebinary = Column(sqla_types.LargeBinary)
             unicodetext = Column(sqla_types.UnicodeText)
             enum = Column(sqla_types.Enum('Primary', 'Secondary'))
+            native_enum = Column(sqla_types.Enum(Fruit))
             boolean = Column(sqla_types.Boolean)
             datetime = Column(sqla_types.DateTime)
             timestamp = Column(sqla_types.TIMESTAMP)
@@ -420,6 +563,8 @@ class ModelFormTest2(TestCase):
         assert isinstance(form.unicodetext, fields.TextAreaField)
 
         assert isinstance(form.enum, fields.SelectField)
+        assert isinstance(form.native_enum, EnumSelectField)
+        assert form.native_enum.enum is Fruit
 
         assert isinstance(form.boolean, fields.BooleanField)
         assert isinstance(form.mssql_bit, fields.BooleanField)

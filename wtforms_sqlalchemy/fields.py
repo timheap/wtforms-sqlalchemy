@@ -4,9 +4,10 @@ Useful form fields for use with SQLAlchemy ORM.
 from __future__ import unicode_literals
 
 import operator
+from contextlib import suppress
 
 from wtforms import widgets
-from wtforms.compat import text_type, string_types
+from wtforms.compat import string_types, text_type
 from wtforms.fields import SelectFieldBase
 from wtforms.validators import ValidationError
 
@@ -202,3 +203,74 @@ class QueryCheckboxField(QuerySelectMultipleField):
 def get_pk_from_identity(obj):
     key = identity_key(instance=obj)[1]
     return ':'.join(text_type(x) for x in key)
+
+
+class BaseEnumSelectField(SelectFieldBase):
+    widget = widgets.Select(multiple=False)
+
+    def __init__(self, *args, enum, members=None, get_label=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enum = enum
+        self.members = list(self.enum if members is None else members)
+        self.member_map = {m.name: m for m in self.members}
+
+        if get_label is not None:
+            self.get_label = get_label
+
+    def get_label(self, member):
+        return str(member)
+
+    def to_choice(self, member):
+        return (str(member.name), self.get_label(member), self.is_selected(member))
+
+    def iter_choices(self):
+        return (self.to_choice(member) for member in self.members)
+
+
+class EnumSelectField(BaseEnumSelectField):
+    def __init__(self, *args, allow_blank=False, blank_text='Select...', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.allow_blank = allow_blank
+        self.blank_text = blank_text
+
+    def iter_choices(self):
+        if self.blank_text is not None and (self.allow_blank or self.data is None):
+            yield ('', self.blank_text, self.data is None)
+        yield from super().iter_choices()
+
+    def is_selected(self, member):
+        return member is self.data
+
+    def process_data(self, value):
+        self.data = None
+        if value is None:
+            pass
+        elif isinstance(value, self.enum):
+            self.data = value
+        else:
+            with suppress(ValueError, KeyError):
+                self.data = self.member_map[str(value)]
+
+    def process_formdata(self, valuelist):
+        if not valuelist or valuelist == ['']:
+            self.data = None
+        else:
+            try:
+                self.data = self.member_map[str(valuelist[0])]
+            except (ValueError, KeyError):
+                raise ValueError(self.gettext('Not a valid choice'))
+
+
+class EnumSelectMultipleField(BaseEnumSelectField):
+    def is_selected(self, member):
+        return bool(self.data) and member in self.data
+
+    def process_data(self, value):
+        self.data = list(value or [])
+
+    def process_formdata(self, valuelist):
+        try:
+            self.data = [self.member_map[str(v)] for v in valuelist]
+        except (ValueError, KeyError):
+            self.data = None
+            raise ValueError(self.gettext('Not a valid choice'))
