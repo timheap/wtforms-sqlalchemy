@@ -9,6 +9,7 @@ from collections import OrderedDict
 from wtforms import fields as wtforms_fields
 from wtforms import validators
 from wtforms.form import Form
+
 from .fields import QuerySelectField, QuerySelectMultipleField
 
 __all__ = (
@@ -161,86 +162,142 @@ class ModelConverter(ModelConverterBase):
             field_args['validators'].append(validators.Length(max=column.type.length))
 
     @converts('String')  # includes Unicode
-    def conv_String(self, column, field_args, **extra):
+    def conv_String(
+        self, column, field_args, *,
+        field_class=wtforms_fields.StringField,
+        **extra,
+    ):
         self._string_common(column=column, field_args=field_args, **extra)
         self._nullable_required(column=column, field_args=field_args, **extra)
-        return wtforms_fields.StringField(**field_args)
+        return field_class(**field_args)
 
     @converts('Text', 'LargeBinary', 'Binary')  # includes UnicodeText
-    def conv_Text(self, column, field_args, **extra):
+    def conv_Text(
+        self, column, field_args, *,
+        field_class=wtforms_fields.TextAreaField,
+        **extra,
+    ):
         self._string_common(column=column, field_args=field_args, **extra)
         self._nullable_required(column=column, field_args=field_args, **extra)
-        return wtforms_fields.TextAreaField(**field_args)
+        return field_class(**field_args)
 
     @converts('Boolean', 'dialects.mssql.base.BIT')
-    def conv_Boolean(self, column, field_args, **extra):
-        return wtforms_fields.BooleanField(**field_args)
+    def conv_Boolean(
+        self, column, field_args, *,
+        field_class=wtforms_fields.BooleanField,
+        **extra,
+    ):
+        return field_class(**field_args)
 
     @converts('Date')
-    def conv_Date(self, column, field_args, **extra):
+    def conv_Date(
+        self, column, field_args, *,
+        field_class=wtforms_fields.DateField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
-        return wtforms_fields.DateField(**field_args)
+        return field_class(**field_args)
 
     @converts('DateTime')
-    def conv_DateTime(self, column, field_args, **extra):
+    def conv_DateTime(
+        self, column, field_args, *,
+        field_class=wtforms_fields.DateTimeField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
-        return wtforms_fields.DateTimeField(**field_args)
+        return field_class(**field_args)
 
     @converts('Enum')
-    def conv_Enum(self, column, field_args, **extra):
+    def conv_Enum(
+        self, column, field_args, *,
+        field_class=wtforms_fields.SelectField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         field_args['choices'] = [(e, e) for e in column.type.enums]
-        return wtforms_fields.SelectField(**field_args)
+        return field_class(**field_args)
 
     @converts('Integer')  # includes BigInteger and SmallInteger
-    def handle_integer_types(self, column, field_args, **extra):
+    def handle_integer_types(
+        self, column, field_args, *,
+        field_class=wtforms_fields.IntegerField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         unsigned = getattr(column.type, 'unsigned', False)
         if unsigned:
             field_args['validators'].append(validators.NumberRange(min=0))
-        return wtforms_fields.IntegerField(**field_args)
+        return field_class(**field_args)
 
     @converts('Numeric')  # includes DECIMAL, Float/FLOAT, REAL, and DOUBLE
-    def handle_decimal_types(self, column, field_args, **extra):
+    def handle_decimal_types(
+        self, column, field_args, *,
+        field_class=wtforms_fields.DecimalField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         # override default decimal places limit, use database defaults instead
         field_args.setdefault('places', None)
-        return wtforms_fields.DecimalField(**field_args)
+        return field_class(**field_args)
 
     @converts('dialects.mysql.types.YEAR', 'dialects.mysql.base.YEAR')
-    def conv_MSYear(self, column, field_args, **extra):
+    def conv_MSYear(
+        self, column, field_args, *,
+        field_class=wtforms_fields.StringField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         field_args['validators'].append(validators.NumberRange(min=1901, max=2155))
-        return wtforms_fields.StringField(**field_args)
+        return field_class(**field_args)
 
     @converts('dialects.postgresql.base.INET')
-    def conv_PGInet(self, column, field_args, **extra):
+    def conv_PGInet(
+        self, column, field_args, *,
+        field_class=wtforms_fields.StringField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'IP Address')
         field_args['validators'].append(validators.IPAddress())
-        return wtforms_fields.StringField(**field_args)
+        return field_class(**field_args)
 
     @converts('dialects.postgresql.base.MACADDR')
-    def conv_PGMacaddr(self, column, field_args, **extra):
+    def conv_PGMacaddr(
+        self, column, field_args, *,
+        field_class=wtforms_fields.StringField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'MAC Address')
         field_args['validators'].append(validators.MacAddress())
-        return wtforms_fields.StringField(**field_args)
+        return field_class(**field_args)
 
     @converts('dialects.postgresql.base.UUID')
-    def conv_PGUuid(self, column, field_args, **extra):
+    def conv_PGUuid(
+        self, column, field_args, *,
+        field_class=wtforms_fields.StringField,
+        **extra,
+    ):
         self._nullable_required(column=column, field_args=field_args, **extra)
         field_args.setdefault('label', 'UUID')
         field_args['validators'].append(validators.UUID())
-        return wtforms_fields.StringField(**field_args)
+        return field_class(**field_args)
 
     @converts('MANYTOONE')
-    def conv_ManyToOne(self, column, field_args, **extra):
-        return QuerySelectField(**field_args)
+    def conv_ManyToOne(
+        self, column, field_args, *,
+        field_class=QuerySelectField,
+        **extra,
+    ):
+        return field_class(**field_args)
 
     @converts('MANYTOMANY', 'ONETOMANY')
-    def conv_ManyToMany(self, column, field_args, **extra):
-        return QuerySelectMultipleField(**field_args)
+    def conv_ManyToMany(
+        self, column, field_args, *,
+        field_class=QuerySelectMultipleField,
+        **extra,
+    ):
+        return field_class(**field_args)
 
 
 def model_fields(model, db_session=None, only=None, exclude=None,

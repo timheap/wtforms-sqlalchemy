@@ -14,7 +14,7 @@ from unittest import TestCase, skipIf
 from wtforms.compat import text_type, iteritems
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from wtforms import Form, fields
-from wtforms_sqlalchemy.orm import model_form, ModelConversionError, ModelConverter
+from wtforms_sqlalchemy.orm import model_form, ModelConversionError, ModelConverter, converts
 from wtforms.validators import Optional, Required, Regexp
 from .common import DummyPostData, contains_validator
 
@@ -32,6 +32,21 @@ class Base(object):
 
 class AnotherInteger(sqla_types.Integer):
     """Use me to test if MRO works like we want"""
+
+
+class FancyStringField(fields.StringField):
+    """Use me to test overriding field classes"""
+
+
+class FancyModelConverter(ModelConverter):
+    @converts('String')
+    def conv_String(
+        self, column, field_args,
+        field_class=FancyStringField,
+        **extra,
+    ):
+        return super().conv_String(
+            column, field_args, field_class=field_class, **extra)
 
 
 class TestBase(TestCase):
@@ -106,7 +121,6 @@ class QuerySelectFieldTest(TestBase):
             .all()
         )
         self.assertEqual(form.a(), [])
-
 
     def test_with_query_factory(self):
         sess = self.Session()
@@ -428,6 +442,13 @@ class ModelFormTest2(TestCase):
         assert isinstance(form.timestamp, fields.DateTimeField)
 
         assert isinstance(form.date, fields.DateField)
+
+    def test_override_types(self):
+        converter = FancyModelConverter()
+        F = model_form(self.AllTypesModel, only=['string', 'integer'], converter=converter)
+        f = F()
+        assert isinstance(f.string, FancyStringField)
+        assert isinstance(f.integer, fields.IntegerField)
 
 
 @skipIf(
