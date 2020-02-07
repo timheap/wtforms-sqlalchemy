@@ -227,12 +227,36 @@ class EnumSelectFieldTest(TestBase):
     def test_field_data(self):
         class F(Form):
             a = EnumSelectField(enum=Fruit)
+
+        form = F(data={'a': Fruit.banana})
+        self.assertTrue(form.validate())
+        self.assertIs(form.data['a'], Fruit.banana)
+
+        form = F(data={'a': 'banana'})
+        self.assertTrue(form.validate())
+        self.assertIs(form.data['a'], Fruit.banana)
+
+        form = F(data={'a': None})
+        self.assertTrue(form.validate())
+        self.assertIs(form.data['a'], None)
+
+    def test_field_formdata(self):
+        class F(Form):
+            a = EnumSelectField(enum=Fruit)
+
         form = F(DummyPostData(a=['banana']))
         self.assertEqual(
             list(form.a.iter_choices()),
             [('apple', 'Apple', False), ('banana', 'Banana', True), ('orange', 'Orange', False)])
         self.assertTrue(form.validate())
         self.assertIs(form.data['a'], Fruit.banana)
+
+        form = F(DummyPostData(a=[]))
+        self.assertEqual(
+            list(form.a.iter_choices()),
+            [('', 'Select...', True), ('apple', 'Apple', False), ('banana', 'Banana', False), ('orange', 'Orange', False)])
+        self.assertTrue(form.validate())
+        self.assertIsNone(form.data['a'])
 
     def test_invalid_choice(self):
         class F(Form):
